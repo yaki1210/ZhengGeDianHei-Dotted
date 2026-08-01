@@ -1,0 +1,46 @@
+name: Build ZhengGeDianHei switcher
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "src/**"
+      - ".github/workflows/build-rust.yml"
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install stable MSVC Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Test
+        run: cargo test --all-targets
+
+      - name: Build release EXE
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Package EXE with external fonts
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE "dist\release"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "target\x86_64-pc-windows-msvc\release\zhengge-font-switcher.exe" (Join-Path $out "正格点黑16字体切换器.exe") -Force
+          Copy-Item "dist\fonts" (Join-Path $out "fonts") -Recurse -Force
+          if (Test-Path "dist\icon.ico") { Copy-Item "dist\icon.ico" $out -Force }
+          $size = (Get-Item (Join-Path $out "正格点黑16字体切换器.exe")).Length
+          Write-Host "EXE bytes: $size"
+          if ($size -ge 10MB) { throw "EXE is not below 10 MiB" }
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zhengge-font-switcher-windows
+          path: dist/release
