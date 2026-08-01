@@ -300,10 +300,9 @@ impl eframe::App for FontSwitcherApp {
                     let mut index = self.density_index as u32;
                     let slider = egui::Slider::new(&mut index, 0..=(values.len() as u32 - 1))
                         .step_by(1.0)
-                        .show_value(false)
-                        .slider_width(slider_w - 20.0);
+                        .show_value(false);
                     
-                    let slider_response = ui.add(slider);
+                    let slider_response = ui.add_sized(Vec2::new(slider_w, 24.0), slider);
                     if slider_response.changed() {
                         self.density_index = index as usize;
                         self.selected_font = None;
