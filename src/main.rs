@@ -2,7 +2,6 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use eframe::egui::{self, Color32, FontData, FontDefinitions, FontFamily, FontId, RichText, Stroke, TextEdit, TextStyle, Vec2, Visuals};
@@ -141,7 +140,7 @@ impl FontSwitcherApp {
                 let mut definitions = FontDefinitions::default();
                 definitions.font_data.insert(
                     FONT_DATA_KEY.to_owned(),
-                    Arc::new(FontData::from_owned(bytes)),
+                    FontData::from_owned(bytes),
                 );
                 let selected_name = FONT_DATA_KEY.to_owned();
                 for family in [FontFamily::Proportional, FontFamily::Monospace] {
@@ -314,8 +313,8 @@ impl eframe::App for FontSwitcherApp {
 
             egui::Frame::group(ui.style())
                 .fill(Color32::from_gray(24))
-                .stroke(Stroke::new(1.0, Color32::from_gray(58)))
-                .inner_margin(egui::Margin::same(14))
+                .stroke(Stroke::new(1.0_f32, Color32::from_gray(58)))
+                .inner_margin(egui::Margin::same(14.0))
                 .show(ui, |ui| {
                     self.render_variant_controls(ui);
                 });

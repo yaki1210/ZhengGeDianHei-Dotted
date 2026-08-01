@@ -366,7 +366,7 @@ fn read_marker(path: &Path) -> Option<(Variant, WidthMode, String)> {
 fn read_marker(_: &Path) -> Option<(Variant, WidthMode, String)> { None }
 
 #[cfg(windows)]
-fn last_win32(operation: &'static str) -> BackendError { BackendError::Win32 { operation, code: unsafe { std::io::Error::last_os_error().raw_os_error().unwrap_or(1) as u32 } } }
+fn last_win32(operation: &'static str) -> BackendError { BackendError::Win32 { operation, code: std::io::Error::last_os_error().raw_os_error().unwrap_or(1) as u32 } }
 
 #[cfg(windows)]
 fn broadcast_font_change() { unsafe { SendMessageTimeoutW(HWND_BROADCAST, WM_FONTCHANGE, 0, 0, SMTO_ABORTIFHUNG, 2000, std::ptr::null_mut()); } }
