@@ -76,6 +76,7 @@ struct FontSwitcherApp {
     shape: Shape,
     density_index: usize,
     preview_text: String,
+    preview_expanded: bool,
     halfwidth: bool,
     selected_font: Option<Variant>,
     selected_path: Option<PathBuf>,
@@ -94,6 +95,7 @@ impl Default for FontSwitcherApp {
             shape: Shape::Dots,
             density_index: 1,
             preview_text: DEFAULT_PREVIEW.to_owned(),
+            preview_expanded: true,
             halfwidth: false,
             selected_font: None,
             selected_path: None,
@@ -295,6 +297,7 @@ impl eframe::App for FontSwitcherApp {
                     });
                     ui.add_space(8.0);
 
+                    // Requirement 1: Full width white slider
                     let values = self.shape.values();
                     let slider_w = ui.available_width();
                     let mut index = self.density_index as u32;
@@ -302,7 +305,7 @@ impl eframe::App for FontSwitcherApp {
                         .step_by(1.0)
                         .show_value(false);
                     
-                    let slider_response = ui.add_sized(Vec2::new(slider_w, 24.0), slider);
+                    let slider_response = ui.add_sized(Vec2::new(slider_w, 28.0), slider);
                     if slider_response.changed() {
                         self.density_index = index as usize;
                         self.selected_font = None;
@@ -311,7 +314,6 @@ impl eframe::App for FontSwitcherApp {
 
                     // Density Ticks Alignment (Left, Center, Right)
                     ui.horizontal(|ui| {
-                        ui.add_space(2.0);
                         let total_w = ui.available_width();
                         
                         let left_val = format!("{}", values[0]);
@@ -332,7 +334,6 @@ impl eframe::App for FontSwitcherApp {
                         );
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.add_space(2.0);
                             let right_val = if self.shape == Shape::Squares && values[2] == 100 {
                                 "100".to_string()
                             } else {
@@ -347,32 +348,54 @@ impl eframe::App for FontSwitcherApp {
                         });
                     });
 
-                    ui.add_space(20.0);
+                    ui.add_space(16.0);
 
-                    // Section 3: Display Text Editor Box
-                    egui::Frame::none()
+                    // Requirement 3: Checkbox for Terminal Half-width mode
+                    let mut halfwidth = self.halfwidth;
+                    if ui.checkbox(
+                        &mut halfwidth,
+                        RichText::new("终端兼容：半宽符号（防止与下一字符重叠）")
+                            .size(14.0)
+                            .color(Color32::from_gray(210))
+                    ).changed() {
+                        self.halfwidth = halfwidth;
+                        self.selected_font = None;
+                    }
+
+                    ui.add_space(18.0);
+
+                    // Requirement 2: Display Text Editor Box - Clickable Header to Expand/Collapse
+                    let sign_text = if self.preview_expanded { "-" } else { "+" };
+                    let header_frame = egui::Frame::none()
                         .fill(Color32::from_rgb(24, 24, 24))
                         .stroke(Stroke::new(1.0, Color32::from_rgb(44, 44, 44)))
                         .rounding(egui::Rounding::same(8.0))
-                        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(RichText::new("展示文本编辑区").size(15.0).color(Color32::from_gray(200)));
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    ui.label(RichText::new("-").size(16.0).color(Color32::from_gray(160)));
-                                });
+                        .inner_margin(egui::Margin::symmetric(14.0, 10.0));
+
+                    let header_resp = header_frame.show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new("展示文本编辑区").size(15.0).color(Color32::from_gray(200)));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.label(RichText::new(sign_text).size(18.0).strong().color(Color32::from_gray(160)));
                             });
                         });
-                    ui.add_space(6.0);
+                    });
 
-                    let preview_font = FontId::new(22.0, FontFamily::Name(FONT_FAMILY.into()));
-                    ui.add_sized(
-                        Vec2::new(ui.available_width(), 130.0),
-                        TextEdit::multiline(&mut self.preview_text)
-                            .font(preview_font)
-                            .desired_rows(3)
-                            .hint_text("输入要预览的文字…"),
-                    );
+                    if header_resp.response.interact(egui::Sense::click()).clicked() {
+                        self.preview_expanded = !self.preview_expanded;
+                    }
+
+                    if self.preview_expanded {
+                        ui.add_space(6.0);
+                        let preview_font = FontId::new(22.0, FontFamily::Name(FONT_FAMILY.into()));
+                        ui.add_sized(
+                            Vec2::new(ui.available_width(), 130.0),
+                            TextEdit::multiline(&mut self.preview_text)
+                                .font(preview_font)
+                                .desired_rows(3)
+                                .hint_text("输入要预览的文字…"),
+                        );
+                    }
 
                     ui.add_space(20.0);
 
@@ -390,11 +413,16 @@ impl eframe::App for FontSwitcherApp {
                                     ui.label(RichText::new("Chrome / Edge · 需要单独确认").size(13.0).color(Color32::from_gray(140)));
                                 });
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(14.0).color(Color32::from_gray(220)))
-                                        .fill(Color32::from_rgb(34, 34, 34))
-                                        .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
-                                        .rounding(egui::Rounding::same(6.0))
-                                        .min_size(Vec2::new(100.0, 36.0));
+                                    // Requirement 4: White background, dark text
+                                    let btn = egui::Button::new(
+                                        RichText::new("设置 / 恢复")
+                                            .size(14.0)
+                                            .strong()
+                                            .color(Color32::from_rgb(17, 17, 17))
+                                    )
+                                    .fill(Color32::WHITE)
+                                    .rounding(egui::Rounding::same(6.0))
+                                    .min_size(Vec2::new(100.0, 36.0));
                                     if ui.add(btn).clicked() {
                                         self.show_browser_menu = !self.show_browser_menu;
                                     }
@@ -429,11 +457,16 @@ impl eframe::App for FontSwitcherApp {
                                     ui.label(RichText::new("Windows Terminal · 需要单独确认").size(13.0).color(Color32::from_gray(140)));
                                 });
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(14.0).color(Color32::from_gray(220)))
-                                        .fill(Color32::from_rgb(34, 34, 34))
-                                        .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
-                                        .rounding(egui::Rounding::same(6.0))
-                                        .min_size(Vec2::new(100.0, 36.0));
+                                    // Requirement 4: White background, dark text
+                                    let btn = egui::Button::new(
+                                        RichText::new("设置 / 恢复")
+                                            .size(14.0)
+                                            .strong()
+                                            .color(Color32::from_rgb(17, 17, 17))
+                                    )
+                                    .fill(Color32::WHITE)
+                                    .rounding(egui::Rounding::same(6.0))
+                                    .min_size(Vec2::new(100.0, 36.0));
                                     if ui.add(btn).clicked() {
                                         self.show_terminal_menu = !self.show_terminal_menu;
                                     }
@@ -615,6 +648,18 @@ fn locate_font(file_name: &str) -> Option<PathBuf> {
     candidates.into_iter().find(|path| Path::new(path).is_file())
 }
 
+// Requirement 5: Embed icon.png into eframe Viewport
+fn load_app_icon() -> Option<egui::IconData> {
+    let icon_bytes = include_bytes!("../icon.png");
+    let image = image::load_from_memory(icon_bytes).ok()?.to_rgba8();
+    let (width, height) = image.dimensions();
+    Some(egui::IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    })
+}
+
 fn install_panic_hook() {
     #[cfg(windows)]
     {
@@ -645,12 +690,18 @@ extern "system" {
 fn main() -> eframe::Result {
     install_panic_hook();
 
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("正格点黑 16 字体切换器")
+        .with_inner_size([720.0, 760.0])
+        .with_min_inner_size([580.0, 640.0]);
+
+    if let Some(icon) = load_app_icon() {
+        viewport = viewport.with_icon(icon);
+    }
+
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Glow,
-        viewport: egui::ViewportBuilder::default()
-            .with_title("正格点黑 16 字体切换器")
-            .with_inner_size([720.0, 760.0])
-            .with_min_inner_size([580.0, 640.0]),
+        viewport,
         ..Default::default()
     };
     eframe::run_native(
@@ -672,9 +723,14 @@ fn dark_visuals() -> Visuals {
     visuals.extreme_bg_color = Color32::from_rgb(14, 14, 14);
     visuals.faint_bg_color = Color32::from_rgb(26, 26, 26);
     visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(28, 28, 28);
-    visuals.widgets.inactive.bg_fill = Color32::from_rgb(34, 34, 34);
-    visuals.widgets.hovered.bg_fill = Color32::from_rgb(50, 50, 50);
-    visuals.widgets.active.bg_fill = Color32::from_rgb(66, 66, 66);
+    
+    // White theme for sliders & active widgets
+    visuals.widgets.inactive.bg_fill = Color32::from_rgb(80, 80, 80);
+    visuals.widgets.hovered.bg_fill = Color32::WHITE;
+    visuals.widgets.active.bg_fill = Color32::WHITE;
+    visuals.selection.bg_fill = Color32::WHITE;
+    visuals.selection.stroke = Stroke::new(1.0, Color32::WHITE);
+    
     visuals.widgets.noninteractive.fg_stroke = Stroke::new(1.0, Color32::from_gray(220));
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, Color32::from_gray(200));
     visuals.widgets.hovered.fg_stroke = Stroke::new(1.0, Color32::from_gray(255));
