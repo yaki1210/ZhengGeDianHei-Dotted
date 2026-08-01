@@ -229,15 +229,6 @@ impl eframe::App for FontSwitcherApp {
                     });
                     ui.add_space(16.0);
 
-                    // Section 1: 像素样式
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new("像素样式").size(16.0).color(Color32::from_gray(220)));
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(RichText::new("选择后即时预览").size(14.0).color(Color32::from_gray(130)));
-                        });
-                    });
-                    ui.add_space(8.0);
-
                     // Full-width Segmented Control
                     ui.columns(2, |cols| {
                         let is_dots = self.shape == Shape::Dots;
@@ -287,26 +278,26 @@ impl eframe::App for FontSwitcherApp {
 
                     ui.add_space(20.0);
 
-                    // Section 2: 密度
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new("密度").size(16.0).color(Color32::from_gray(220)));
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let label_text = format!("{} · {}%", self.shape.label(), self.variant().density);
-                            ui.label(RichText::new(label_text).size(16.0).strong().color(Color32::WHITE));
-                        });
-                    });
-                    ui.add_space(8.0);
-
-                    // Requirement 1: Full width white slider
+                    // Full-width white slider
                     let values = self.shape.values();
                     let slider_w = ui.available_width();
                     let mut index = self.density_index as u32;
-                    let slider = egui::Slider::new(&mut index, 0..=(values.len() as u32 - 1))
-                        .step_by(1.0)
-                        .show_value(false);
-                    
-                    let slider_response = ui.add_sized(Vec2::new(slider_w, 28.0), slider);
-                    if slider_response.changed() {
+                    let values_len = values.len() as u32 - 1;
+
+                    let slider_changed = ui.scope(|ui| {
+                        ui.set_min_width(slider_w);
+                        ui.spacing_mut().slider_width = slider_w;
+                        ui.visuals_mut().widgets.inactive.bg_fill = Color32::WHITE;
+                        ui.visuals_mut().widgets.inactive.fg_stroke = Stroke::new(1.0, Color32::from_rgb(80, 80, 80));
+
+                        let slider = egui::Slider::new(&mut index, 0..=values_len)
+                            .step_by(1.0)
+                            .show_value(false);
+
+                        ui.add(slider).changed()
+                    }).inner;
+
+                    if slider_changed {
                         self.density_index = index as usize;
                         self.selected_font = None;
                     }
@@ -347,20 +338,6 @@ impl eframe::App for FontSwitcherApp {
                             );
                         });
                     });
-
-                    ui.add_space(16.0);
-
-                    // Requirement 3: Checkbox for Terminal Half-width mode
-                    let mut halfwidth = self.halfwidth;
-                    if ui.checkbox(
-                        &mut halfwidth,
-                        RichText::new("终端兼容：半宽符号（防止与下一字符重叠）")
-                            .size(14.0)
-                            .color(Color32::from_gray(210))
-                    ).changed() {
-                        self.halfwidth = halfwidth;
-                        self.selected_font = None;
-                    }
 
                     ui.add_space(18.0);
 
@@ -472,6 +449,20 @@ impl eframe::App for FontSwitcherApp {
                                     }
                                 });
                             });
+
+                            // Half-width terminal compatibility mode
+                            ui.add_space(8.0);
+                            let mut halfwidth = self.halfwidth;
+                            if ui.checkbox(
+                                &mut halfwidth,
+                                RichText::new("窄终端兼容模式（半宽符号：防止与下一字符重叠）")
+                                    .size(14.0)
+                                    .color(Color32::from_gray(210))
+                            ).changed() {
+                                self.halfwidth = halfwidth;
+                                self.selected_font = None;
+                            }
+
                             if self.show_terminal_menu {
                                 ui.add_space(8.0);
                                 ui.separator();
@@ -692,8 +683,8 @@ fn main() -> eframe::Result {
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("正格点黑 16 字体切换器")
-        .with_inner_size([720.0, 760.0])
-        .with_min_inner_size([580.0, 640.0]);
+        .with_inner_size([720.0, 820.0])
+        .with_min_inner_size([580.0, 680.0]);
 
     if let Some(icon) = load_app_icon() {
         viewport = viewport.with_icon(icon);
