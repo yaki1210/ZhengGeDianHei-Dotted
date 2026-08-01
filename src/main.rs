@@ -477,7 +477,11 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| {
             cc.egui_ctx.set_visuals(dark_visuals());
-            apply_ui_font(&cc.egui_ctx);
+            // Bind the "zhengge-preview" font family BEFORE apply_ui_font sets
+            // all text styles to use it. Without this, the very first frame
+            // would panic ("FontFamily is not bound to any fonts") because
+            // apply_ui_font runs before load_selected_font ever calls set_fonts.
+            bind_fallback_font(&cc.egui_ctx);
             Ok(Box::new(FontSwitcherApp::default()))
         }),
     )
