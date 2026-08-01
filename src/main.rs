@@ -151,9 +151,19 @@ impl FontSwitcherApp {
                     fonts.retain(|name| name != FONT_DATA_KEY);
                     fonts.insert(0, selected_name.clone());
                 }
+                // Use the built-in Proportional font list as fallback after the
+                // custom font. "Proportional" is a FontFamily variant, not a
+                // font_data key, so we must reuse the actual default font names.
+                let proportional_fonts = definitions
+                    .families
+                    .get(&FontFamily::Proportional)
+                    .cloned()
+                    .unwrap_or_default();
                 definitions.families.insert(
                     FontFamily::Name(FONT_FAMILY.into()),
-                    vec![selected_name, "Proportional".to_owned()],
+                    std::iter::once(selected_name)
+                        .chain(proportional_fonts.into_iter())
+                        .collect(),
                 );
                 ctx.set_fonts(definitions);
                 apply_ui_font(ctx);
@@ -371,10 +381,18 @@ impl eframe::App for FontSwitcherApp {
 /// custom font file is missing or unreadable.
 fn bind_fallback_font(ctx: &egui::Context) {
     let mut definitions = FontDefinitions::default();
-    definitions.families.insert(
-        FontFamily::Name(FONT_FAMILY.into()),
-        vec!["Proportional".to_owned()],
-    );
+    // Reuse the built-in Proportional font list (e.g. ["Ubuntu-Light",
+    // "NotoEmoji-Regular", "emoji-icon-font"]) for the preview family. The font
+    // data keys are these names, NOT "Proportional" (which is a FontFamily
+    // variant, not a font_data key).
+    let proportional_fonts = definitions
+        .families
+        .get(&FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
+    definitions
+        .families
+        .insert(FontFamily::Name(FONT_FAMILY.into()), proportional_fonts);
     ctx.set_fonts(definitions);
     apply_ui_font(ctx);
 }
