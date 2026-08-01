@@ -401,8 +401,43 @@ fn locate_font(file_name: &str) -> Option<PathBuf> {
     candidates.into_iter().find(|path| Path::new(path).is_file())
 }
 
+/// Install a panic hook that shows a MessageBox on Windows so that
+/// panics are not completely silent in a `windows_subsystem = "windows"` app.
+fn install_panic_hook() {
+    #[cfg(windows)]
+    {
+        std::panic::set_hook(Box::new(|info| {
+            let msg = format!("程序发生错误：\n\n{info}");
+            use std::os::windows::ffi::OsStrExt;
+            let text: Vec<u16> = std::ffi::OsStr::new(&msg)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            let title: Vec<u16> = std::ffi::OsStr::new("正格点黑 16 字体切换器")
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
+            unsafe {
+                MessageBoxW(std::ptr::null_mut(), text.as_ptr(), title.as_ptr(), 0x10);
+            }
+        }));
+    }
+}
+
+#[cfg(windows)]
+#[link(name = "user32")]
+extern "system" {
+    fn MessageBoxW(hwnd: *mut std::ffi::c_void, text: *const u16, caption: *const u16, utype: u32) -> i32;
+}
+
 fn main() -> eframe::Result {
+    install_panic_hook();
+
     let options = eframe::NativeOptions {
+        // Use the Glow (OpenGL) renderer instead of the default wgpu backend.
+        // wgpu can fail to initialize on systems with unusual GPU configurations
+        // (e.g. virtual display adapters), causing a silent panic→abort crash.
+        renderer: eframe::Renderer::Glow,
         viewport: egui::ViewportBuilder::default()
             .with_title("正格点黑 16 字体切换器")
             .with_inner_size([640.0, 680.0])
