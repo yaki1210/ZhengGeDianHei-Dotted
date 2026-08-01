@@ -131,6 +131,7 @@ impl FontSwitcherApp {
         self.selected_font = Some(variant);
         let Some(path) = locate_font(&variant.file_name(self.halfwidth)) else {
             self.selected_path = None;
+            bind_fallback_font(ctx);
             self.set_status(format!("找不到字体文件：{}（已使用系统回退字体）", variant.file_name(self.halfwidth)), true);
             return;
         };
@@ -159,6 +160,7 @@ impl FontSwitcherApp {
             }
             Err(error) => {
                 self.selected_path = None;
+                bind_fallback_font(ctx);
                 self.set_status(format!("无法读取字体：{} ({error})", path.display()), true);
             }
         }
@@ -349,6 +351,19 @@ impl eframe::App for FontSwitcherApp {
             ui.label(RichText::new("预览文本仅保存在内存中；应用切换不会自动执行。").small().weak());
         });
     }
+}
+
+/// Bind the preview font family to the default Proportional fonts as a fallback,
+/// so that egui never panics with "FontFamily is not bound to any fonts" when the
+/// custom font file is missing or unreadable.
+fn bind_fallback_font(ctx: &egui::Context) {
+    let mut definitions = FontDefinitions::default();
+    definitions.families.insert(
+        FontFamily::Name(FONT_FAMILY.into()),
+        vec!["Proportional".to_owned()],
+    );
+    ctx.set_fonts(definitions);
+    apply_ui_font(ctx);
 }
 
 fn apply_ui_font(ctx: &egui::Context) {
