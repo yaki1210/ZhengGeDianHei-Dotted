@@ -217,7 +217,7 @@ impl eframe::App for FontSwitcherApp {
                     
                     // App Title Header
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("正格点黑 16").size(22.0).bold().color(Color32::WHITE));
+                        ui.label(RichText::new("正格点黑 16").size(22.0).strong().color(Color32::WHITE));
                         ui.label(RichText::new("字体切换器").size(16.0).color(Color32::from_gray(160)));
                     });
                     ui.add_space(16.0);
@@ -285,7 +285,7 @@ impl eframe::App for FontSwitcherApp {
                         ui.label(RichText::new("密度").size(16.0).color(Color32::from_gray(220)));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let label_text = format!("{} · {}%", self.shape.label(), self.variant().density);
-                            ui.label(RichText::new(label_text).size(16.0).bold().color(Color32::WHITE));
+                            ui.label(RichText::new(label_text).size(16.0).strong().color(Color32::WHITE));
                         });
                     });
                     ui.add_space(8.0);
@@ -320,7 +320,7 @@ impl eframe::App for FontSwitcherApp {
                             };
                             let is_curr = i == self.density_index;
                             let rt = if is_curr {
-                                RichText::new(text).size(15.0).bold().color(Color32::WHITE)
+                                RichText::new(text).size(15.0).strong().color(Color32::WHITE)
                             } else {
                                 RichText::new(text).size(14.0).color(Color32::from_gray(130))
                             };
@@ -454,7 +454,7 @@ impl eframe::App for FontSwitcherApp {
                             let btn_apply = egui::Button::new(
                                 RichText::new("应用\n切换")
                                     .size(16.0)
-                                    .bold()
+                                    .strong()
                                     .color(Color32::from_rgb(17, 17, 17))
                             )
                             .fill(Color32::WHITE)
