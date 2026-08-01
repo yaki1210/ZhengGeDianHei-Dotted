@@ -84,6 +84,7 @@ struct FontSwitcherApp {
     status: String,
     status_is_error: bool,
     status_started: Instant,
+    fonts_ready: bool,
 }
 
 impl Default for FontSwitcherApp {
@@ -100,6 +101,7 @@ impl Default for FontSwitcherApp {
             status: "尚未应用到系统字体".to_owned(),
             status_is_error: false,
             status_started: Instant::now(),
+            fonts_ready: false,
         }
     }
 }
@@ -299,6 +301,17 @@ impl FontSwitcherApp {
 
 impl eframe::App for FontSwitcherApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // ctx.set_fonts() during update() does not take effect for the current
+        // frame's text layout. On the first frame the "zhengge-preview" family
+        // is still unbound, so rendering any text with it would panic. Bind the
+        // fonts first, then skip rendering this frame and let the next frame
+        // (with fonts now bound) do the actual UI.
+        if !self.fonts_ready {
+            self.load_selected_font(ctx);
+            self.fonts_ready = true;
+            ctx.request_repaint();
+            return;
+        }
         self.load_selected_font(ctx);
         if self.status_started.elapsed() < Duration::from_secs(2) {
             ctx.request_repaint_after(Duration::from_millis(250));
