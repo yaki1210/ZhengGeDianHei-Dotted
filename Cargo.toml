@@ -6,7 +6,7 @@ description = "Minimal Rust/eframe switcher preview for ZhengGeDianHei 16"
 license = "OFL-1.1"
 
 [dependencies]
-eframe = { version = "0.29", default-features = false, features = ["glow", "default_fonts"] }
+eframe = "0.29"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
