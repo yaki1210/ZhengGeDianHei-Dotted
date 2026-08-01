@@ -209,15 +209,20 @@ impl eframe::App for FontSwitcherApp {
             ctx.request_repaint_after(Duration::from_millis(250));
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let panel_frame = egui::Frame::central_panel(&ctx.style())
+            .fill(Color32::from_rgb(18, 18, 18))
+            .inner_margin(egui::Margin::symmetric(20.0, 16.0));
+
+        egui::CentralPanel::default().frame(panel_frame).show(ctx, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
-                    ui.add_space(10.0);
+                    ui.add_space(4.0);
                     
                     // App Title Header
                     ui.horizontal(|ui| {
                         ui.label(RichText::new("正格点黑 16").size(22.0).strong().color(Color32::WHITE));
+                        ui.add_space(4.0);
                         ui.label(RichText::new("字体切换器").size(16.0).color(Color32::from_gray(160)));
                     });
                     ui.add_space(16.0);
@@ -291,54 +296,66 @@ impl eframe::App for FontSwitcherApp {
                     ui.add_space(8.0);
 
                     let values = self.shape.values();
+                    let slider_w = ui.available_width();
                     let mut index = self.density_index as u32;
-                    let slider_response = ui.add_sized(
-                        Vec2::new(ui.available_width(), 26.0),
-                        egui::Slider::new(&mut index, 0..=(values.len() as u32 - 1))
-                            .step_by(1.0)
-                            .show_value(false)
-                    );
+                    let slider = egui::Slider::new(&mut index, 0..=(values.len() as u32 - 1))
+                        .step_by(1.0)
+                        .show_value(false)
+                        .slider_width(slider_w - 20.0);
+                    
+                    let slider_response = ui.add(slider);
                     if slider_response.changed() {
                         self.density_index = index as usize;
                         self.selected_font = None;
                     }
+                    ui.add_space(4.0);
 
-                    // Density Ticks Alignment
+                    // Density Ticks Alignment (Left, Center, Right)
                     ui.horizontal(|ui| {
-                        let total_width = ui.available_width();
-                        let gap = total_width / 2.0 - 20.0;
-                        for (i, val) in values.iter().enumerate() {
-                            let text = if self.shape == Shape::Squares && *val == 100 {
-                                "100"
+                        ui.add_space(2.0);
+                        let total_w = ui.available_width();
+                        
+                        let left_val = format!("{}", values[0]);
+                        let is_left = self.density_index == 0;
+                        ui.label(
+                            RichText::new(left_val)
+                                .size(14.0)
+                                .color(if is_left { Color32::WHITE } else { Color32::from_gray(130) })
+                        );
+
+                        ui.add_space(total_w / 2.0 - 36.0);
+                        let mid_val = format!("{}", values[1]);
+                        let is_mid = self.density_index == 1;
+                        ui.label(
+                            RichText::new(mid_val)
+                                .size(14.0)
+                                .color(if is_mid { Color32::WHITE } else { Color32::from_gray(130) })
+                        );
+
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.add_space(2.0);
+                            let right_val = if self.shape == Shape::Squares && values[2] == 100 {
+                                "100".to_string()
                             } else {
-                                match val {
-                                    70 => "70",
-                                    80 => "80",
-                                    90 => "90",
-                                    _ => "100",
-                                }
+                                format!("{}", values[2])
                             };
-                            let is_curr = i == self.density_index;
-                            let rt = if is_curr {
-                                RichText::new(text).size(15.0).strong().color(Color32::WHITE)
-                            } else {
-                                RichText::new(text).size(14.0).color(Color32::from_gray(130))
-                            };
-                            ui.label(rt);
-                            if i < values.len() - 1 {
-                                ui.add_space(gap);
-                            }
-                        }
+                            let is_right = self.density_index == 2;
+                            ui.label(
+                                RichText::new(right_val)
+                                    .size(14.0)
+                                    .color(if is_right { Color32::WHITE } else { Color32::from_gray(130) })
+                            );
+                        });
                     });
 
                     ui.add_space(20.0);
 
                     // Section 3: Display Text Editor Box
                     egui::Frame::none()
-                        .fill(Color32::from_rgb(22, 22, 22))
+                        .fill(Color32::from_rgb(24, 24, 24))
                         .stroke(Stroke::new(1.0, Color32::from_rgb(44, 44, 44)))
                         .rounding(egui::Rounding::same(8.0))
-                        .inner_margin(egui::Margin::same(12.0))
+                        .inner_margin(egui::Margin::symmetric(14.0, 10.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.label(RichText::new("展示文本编辑区").size(15.0).color(Color32::from_gray(200)));
@@ -350,14 +367,11 @@ impl eframe::App for FontSwitcherApp {
                     ui.add_space(6.0);
 
                     let preview_font = FontId::new(22.0, FontFamily::Name(FONT_FAMILY.into()));
-                    let avail_h = ui.available_height();
-                    let text_box_height = if avail_h > 350.0 { avail_h - 260.0 } else { 160.0 };
-                    
                     ui.add_sized(
-                        Vec2::new(ui.available_width(), text_box_height),
+                        Vec2::new(ui.available_width(), 130.0),
                         TextEdit::multiline(&mut self.preview_text)
                             .font(preview_font)
-                            .desired_rows(4)
+                            .desired_rows(3)
                             .hint_text("输入要预览的文字…"),
                     );
 
@@ -365,31 +379,32 @@ impl eframe::App for FontSwitcherApp {
 
                     // Section 4: 浏览器 Integration Card
                     egui::Frame::none()
-                        .fill(Color32::from_rgb(22, 22, 22))
+                        .fill(Color32::from_rgb(24, 24, 24))
                         .stroke(Stroke::new(1.0, Color32::from_rgb(44, 44, 44)))
                         .rounding(egui::Rounding::same(8.0))
-                        .inner_margin(egui::Margin::same(14.0))
+                        .inner_margin(egui::Margin::symmetric(16.0, 12.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.vertical(|ui| {
-                                    ui.label(RichText::new("浏览器").size(17.0).strong().color(Color32::WHITE));
-                                    ui.label(RichText::new("Chrome / Edge · 需要单独确认").size(14.0).color(Color32::from_gray(140)));
+                                    ui.label(RichText::new("浏览器").size(16.0).strong().color(Color32::WHITE));
+                                    ui.add_space(2.0);
+                                    ui.label(RichText::new("Chrome / Edge · 需要单独确认").size(13.0).color(Color32::from_gray(140)));
                                 });
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(15.0).color(Color32::from_gray(220)))
-                                        .fill(Color32::from_rgb(32, 32, 32))
-                                        .stroke(Stroke::new(1.0, Color32::from_rgb(55, 55, 55)))
+                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(14.0).color(Color32::from_gray(220)))
+                                        .fill(Color32::from_rgb(34, 34, 34))
+                                        .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
                                         .rounding(egui::Rounding::same(6.0))
-                                        .min_size(Vec2::new(110.0, 38.0));
+                                        .min_size(Vec2::new(100.0, 36.0));
                                     if ui.add(btn).clicked() {
                                         self.show_browser_menu = !self.show_browser_menu;
                                     }
                                 });
                             });
                             if self.show_browser_menu {
-                                ui.add_space(10.0);
-                                ui.separator();
                                 ui.add_space(8.0);
+                                ui.separator();
+                                ui.add_space(6.0);
                                 ui.horizontal_wrapped(|ui| {
                                     if ui.button("应用 Chrome").clicked() { self.apply_browser(Browser::Chrome); }
                                     if ui.button("恢复 Chrome").clicked() { self.restore_browser(Browser::Chrome); }
@@ -403,31 +418,32 @@ impl eframe::App for FontSwitcherApp {
 
                     // Section 5: 终端与控制台 Integration Card
                     egui::Frame::none()
-                        .fill(Color32::from_rgb(22, 22, 22))
+                        .fill(Color32::from_rgb(24, 24, 24))
                         .stroke(Stroke::new(1.0, Color32::from_rgb(44, 44, 44)))
                         .rounding(egui::Rounding::same(8.0))
-                        .inner_margin(egui::Margin::same(14.0))
+                        .inner_margin(egui::Margin::symmetric(16.0, 12.0))
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.vertical(|ui| {
-                                    ui.label(RichText::new("终端与控制台").size(17.0).strong().color(Color32::WHITE));
-                                    ui.label(RichText::new("Windows Terminal · 需要单独确认").size(14.0).color(Color32::from_gray(140)));
+                                    ui.label(RichText::new("终端与控制台").size(16.0).strong().color(Color32::WHITE));
+                                    ui.add_space(2.0);
+                                    ui.label(RichText::new("Windows Terminal · 需要单独确认").size(13.0).color(Color32::from_gray(140)));
                                 });
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(15.0).color(Color32::from_gray(220)))
-                                        .fill(Color32::from_rgb(32, 32, 32))
-                                        .stroke(Stroke::new(1.0, Color32::from_rgb(55, 55, 55)))
+                                    let btn = egui::Button::new(RichText::new("设置 / 恢复").size(14.0).color(Color32::from_gray(220)))
+                                        .fill(Color32::from_rgb(34, 34, 34))
+                                        .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
                                         .rounding(egui::Rounding::same(6.0))
-                                        .min_size(Vec2::new(110.0, 38.0));
+                                        .min_size(Vec2::new(100.0, 36.0));
                                     if ui.add(btn).clicked() {
                                         self.show_terminal_menu = !self.show_terminal_menu;
                                     }
                                 });
                             });
                             if self.show_terminal_menu {
-                                ui.add_space(10.0);
-                                ui.separator();
                                 ui.add_space(8.0);
+                                ui.separator();
+                                ui.add_space(6.0);
                                 ui.horizontal_wrapped(|ui| {
                                     if ui.button("应用终端字体").clicked() {
                                         match apply_terminal_font(SYSTEM_FAMILY, 16) {
@@ -445,21 +461,36 @@ impl eframe::App for FontSwitcherApp {
                             }
                         });
 
-                    ui.add_space(20.0);
+                    ui.add_space(16.0);
 
                     // Section 6: Bottom Action Bar
                     ui.horizontal(|ui| {
+                        let status_desc = format!("已预览：{}；点击“应用切换”后才写入系统字体设置。", self.variant().description());
+                        let left_width = (ui.available_width() - 310.0).max(180.0);
+                        
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(left_width, 50.0),
+                            egui::Layout::left_to_right(egui::Align::Center),
+                            |ui| {
+                                ui.label(
+                                    RichText::new(status_desc)
+                                        .size(13.0)
+                                        .color(Color32::from_gray(160))
+                                );
+                            }
+                        );
+
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            // Button 3: 应用切换 (Primary White Button)
+                            // Button 3: 应用切换
                             let btn_apply = egui::Button::new(
                                 RichText::new("应用\n切换")
-                                    .size(16.0)
+                                    .size(15.0)
                                     .strong()
                                     .color(Color32::from_rgb(17, 17, 17))
                             )
                             .fill(Color32::WHITE)
                             .rounding(egui::Rounding::same(8.0))
-                            .min_size(Vec2::new(100.0, 52.0));
+                            .min_size(Vec2::new(92.0, 50.0));
                             
                             if ui.add(btn_apply).clicked() {
                                 let width = if self.halfwidth { WidthMode::Half } else { WidthMode::Full };
@@ -470,18 +501,18 @@ impl eframe::App for FontSwitcherApp {
                                 }
                             }
 
-                            ui.add_space(10.0);
+                            ui.add_space(6.0);
 
-                            // Button 2: 停用字体 (Dark Button)
+                            // Button 2: 停用字体
                             let btn_disable = egui::Button::new(
                                 RichText::new("停用\n字体")
-                                    .size(16.0)
+                                    .size(15.0)
                                     .color(Color32::from_gray(230))
                             )
                             .fill(Color32::from_rgb(34, 34, 34))
                             .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
                             .rounding(egui::Rounding::same(8.0))
-                            .min_size(Vec2::new(94.0, 52.0));
+                            .min_size(Vec2::new(86.0, 50.0));
 
                             if ui.add(btn_disable).clicked() {
                                 match self.backend.disable() {
@@ -490,18 +521,18 @@ impl eframe::App for FontSwitcherApp {
                                 }
                             }
 
-                            ui.add_space(10.0);
+                            ui.add_space(6.0);
 
-                            // Button 1: 检查状态 (Dark Button)
+                            // Button 1: 检查状态
                             let btn_check = egui::Button::new(
                                 RichText::new("检查\n状态")
-                                    .size(16.0)
+                                    .size(15.0)
                                     .color(Color32::from_gray(230))
                             )
                             .fill(Color32::from_rgb(34, 34, 34))
                             .stroke(Stroke::new(1.0, Color32::from_rgb(60, 60, 60)))
                             .rounding(egui::Rounding::same(8.0))
-                            .min_size(Vec2::new(94.0, 52.0));
+                            .min_size(Vec2::new(86.0, 50.0));
 
                             if ui.add(btn_check).clicked() {
                                 match self.backend.check() {
@@ -513,21 +544,13 @@ impl eframe::App for FontSwitcherApp {
                                     Err(error) => self.set_status(format!("检查失败：{error}"), true),
                                 }
                             }
-
-                            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                let status_desc = format!("已预览：{}；点击“应用切换”后才写入系统字体设置。", self.variant().description());
-                                ui.label(
-                                    RichText::new(status_desc)
-                                        .size(14.0)
-                                        .color(Color32::from_gray(160))
-                                );
-                            });
                         });
                     });
 
                     ui.add_space(10.0);
-                    let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(170) };
-                    ui.label(RichText::new(&self.status).size(14.0).color(status_color));
+                    let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
+                    ui.label(RichText::new(&self.status).size(13.0).color(status_color));
+                    ui.add_space(16.0);
                 });
         });
     }
@@ -627,8 +650,8 @@ fn main() -> eframe::Result {
         renderer: eframe::Renderer::Glow,
         viewport: egui::ViewportBuilder::default()
             .with_title("正格点黑 16 字体切换器")
-            .with_inner_size([760.0, 800.0])
-            .with_min_inner_size([500.0, 600.0]),
+            .with_inner_size([720.0, 760.0])
+            .with_min_inner_size([580.0, 640.0]),
         ..Default::default()
     };
     eframe::run_native(
