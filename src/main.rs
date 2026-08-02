@@ -169,7 +169,6 @@ impl FontSwitcherApp {
                 ctx.set_fonts(definitions);
                 apply_ui_font(ctx);
                 self.selected_path = Some(path.clone());
-                self.set_status(format!("预览已切换：{}", variant.description()), false);
             }
             Err(error) => {
                 self.selected_path = None;
@@ -488,7 +487,7 @@ impl eframe::App for FontSwitcherApp {
 
                     // Section 6: Bottom Action Bar
                     ui.horizontal(|ui| {
-                        let status_desc = format!("已预览：{}；点击“应用切换”后才写入系统字体设置。", self.variant().description());
+                        let status_desc = format!("已预览：{}", self.variant().description());
                         let left_width = (ui.available_width() - 310.0).max(180.0);
                         
                         ui.allocate_ui_with_layout(
@@ -683,7 +682,7 @@ fn main() -> eframe::Result {
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("正格点黑 16 字体切换器")
-        .with_inner_size([720.0, 820.0])
+        .with_inner_size([720.0, 850.0])
         .with_min_inner_size([580.0, 700.0]);
 
     if let Some(icon) = load_app_icon() {
