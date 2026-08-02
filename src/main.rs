@@ -551,22 +551,18 @@ impl eframe::App for FontSwitcherApp {
                     ui.add_space(16.0);
 
                     // Section 6: Bottom Action Bar
+                    // Status text on bottom layer, buttons on top layer so long text doesn't push buttons
+                    let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(&self.status)
+                                .size(17.0)
+                                .color(status_color)
+                        )
+                        .wrap()
+                    );
+                    ui.add_space(8.0);
                     ui.horizontal(|ui| {
-                        let left_width = (ui.available_width() - 310.0).max(180.0);
-                        
-                        ui.allocate_ui_with_layout(
-                            Vec2::new(left_width, 50.0),
-                            egui::Layout::left_to_right(egui::Align::Center),
-                            |ui| {
-                                let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
-                                ui.label(
-                                    RichText::new(&self.status)
-                                        .size(17.0)
-                                        .color(status_color)
-                                );
-                            }
-                        );
-
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             // Button 3: 应用切换
                             let btn_apply = egui::Button::new(
@@ -583,7 +579,7 @@ impl eframe::App for FontSwitcherApp {
                                 let width = if self.halfwidth { WidthMode::Half } else { WidthMode::Full };
                                 let variant = self.backend_variant();
                                 match self.backend.install(variant, width) {
-                                    Ok(report) => self.set_status(format!("已应用 {}：{}", self.variant().description(), report.active.path.display()), false),
+                                    Ok(report) => self.set_status(format!("已应用 {}\n{}", self.variant().description(), report.active.path.display()), false),
                                     Err(error) => self.set_status(format!("应用失败：{error}"), true),
                                 }
                             }
