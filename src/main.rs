@@ -85,6 +85,7 @@ struct FontSwitcherApp {
     status_is_error: bool,
     status_started: Instant,
     fonts_ready: bool,
+    status_checked: bool,
     show_browser_menu: bool,
     show_terminal_menu: bool,
 }
@@ -104,6 +105,7 @@ impl Default for FontSwitcherApp {
             status_is_error: false,
             status_started: Instant::now(),
             fonts_ready: false,
+            status_checked: false,
             show_browser_menu: false,
             show_terminal_menu: false,
         }
@@ -204,6 +206,18 @@ impl eframe::App for FontSwitcherApp {
             self.fonts_ready = true;
             ctx.request_repaint();
             return;
+        }
+        // Auto-check install status once on startup
+        if !self.status_checked {
+            self.status_checked = true;
+            match self.backend.check() {
+                Ok(status) => match status.state {
+                    InstallState::Installed(active) => self.set_status(format!("已安装：{}", active.variant.key()), false),
+                    InstallState::NotInstalled => self.set_status("尚未安装正格点黑 16", false),
+                    InstallState::Mismatch { reason, .. } => self.set_status(format!("安装状态异常：{reason}"), true),
+                },
+                Err(error) => self.set_status(format!("检查失败：{error}"), true),
+            }
         }
         self.load_selected_font(ctx);
         if self.status_started.elapsed() < Duration::from_secs(2) {
