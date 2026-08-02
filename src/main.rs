@@ -17,6 +17,11 @@ const FONT_DATA_KEY: &str = "zhengge-selected";
 const SYSTEM_FAMILY: &str = "正格点黑 16";
 const DEFAULT_PREVIEW: &str = "正格点黑 16  Aa 0123456789\n像素字体之美 · 中英数字 ↔ →";
 
+// Persistence keys (eframe Storage is string->string)
+const STORE_SHAPE: &str = "zg.shape";
+const STORE_DENSITY: &str = "zg.density";
+const STORE_HALFWIDTH: &str = "zg.halfwidth";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Shape {
     Dots,
@@ -86,18 +91,45 @@ struct FontSwitcherApp {
     status_started: Instant,
     fonts_ready: bool,
     status_checked: bool,
+    installed_label: Option<String>,
     show_browser_menu: bool,
     show_terminal_menu: bool,
 }
 
 impl Default for FontSwitcherApp {
     fn default() -> Self {
+        Self::new(None)
+    }
+}
+
+impl FontSwitcherApp {
+    fn new(storage: Option<&dyn eframe::Storage>) -> Self {
+        let shape = storage
+            .and_then(|s| s.get_string(STORE_SHAPE))
+            .and_then(|v| match v.as_str() {
+                "squares" => Some(Shape::Squares),
+                "dots" => Some(Shape::Dots),
+                _ => None,
+            })
+            .unwrap_or(Shape::Dots);
+
+        let density_index = storage
+            .and_then(|s| s.get_string(STORE_DENSITY))
+            .and_then(|v| v.parse::<usize>().ok())
+            .map(|i| i.min(shape.values().len().saturating_sub(1)))
+            .unwrap_or(1);
+
+        let halfwidth = storage
+            .and_then(|s| s.get_string(STORE_HALFWIDTH))
+            .map(|v| v == "1")
+            .unwrap_or(false);
+
         Self {
-            shape: Shape::Dots,
-            density_index: 1,
+            shape,
+            density_index,
             preview_text: DEFAULT_PREVIEW.to_owned(),
             preview_expanded: true,
-            halfwidth: false,
+            halfwidth,
             selected_font: None,
             selected_path: None,
             backend: FontBackend::new(locate_fonts_dir()),
@@ -106,6 +138,7 @@ impl Default for FontSwitcherApp {
             status_started: Instant::now(),
             fonts_ready: false,
             status_checked: false,
+            installed_label: None,
             show_browser_menu: false,
             show_terminal_menu: false,
         }
@@ -128,6 +161,32 @@ impl FontSwitcherApp {
         self.status = text.into();
         self.status_is_error = is_error;
         self.status_started = Instant::now();
+    }
+
+    /// Run install-state check and update both the bottom status bar and the
+    /// title-line installed label.
+    fn run_check(&mut self) {
+        match self.backend.check() {
+            Ok(status) => match status.state {
+                InstallState::Installed(active) => {
+                    let key = active.variant.key();
+                    self.installed_label = Some(format!("已安装：{}", key));
+                    self.set_status(self.installed_label.clone().unwrap(), false);
+                }
+                InstallState::NotInstalled => {
+                    self.installed_label = Some("未安装".to_owned());
+                    self.set_status("尚未安装正格点黑 16", false);
+                }
+                InstallState::Mismatch { reason, .. } => {
+                    self.installed_label = Some("状态异常".to_owned());
+                    self.set_status(format!("安装状态异常：{reason}"), true);
+                }
+            },
+            Err(error) => {
+                self.installed_label = Some("检查失败".to_owned());
+                self.set_status(format!("检查失败：{error}"), true);
+            }
+        }
     }
 
     fn load_selected_font(&mut self, ctx: &egui::Context) {
@@ -200,6 +259,12 @@ impl FontSwitcherApp {
 }
 
 impl eframe::App for FontSwitcherApp {
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        _storage.set_string(STORE_SHAPE, match self.shape { Shape::Dots => "dots", Shape::Squares => "squares" }.to_owned());
+        _storage.set_string(STORE_DENSITY, self.density_index.to_string());
+        _storage.set_string(STORE_HALFWIDTH, if self.halfwidth { "1" } else { "0" }.to_owned());
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if !self.fonts_ready {
             self.load_selected_font(ctx);
@@ -210,14 +275,7 @@ impl eframe::App for FontSwitcherApp {
         // Auto-check install status once on startup
         if !self.status_checked {
             self.status_checked = true;
-            match self.backend.check() {
-                Ok(status) => match status.state {
-                    InstallState::Installed(active) => self.set_status(format!("已安装：{}", active.variant.key()), false),
-                    InstallState::NotInstalled => self.set_status("尚未安装正格点黑 16", false),
-                    InstallState::Mismatch { reason, .. } => self.set_status(format!("安装状态异常：{reason}"), true),
-                },
-                Err(error) => self.set_status(format!("检查失败：{error}"), true),
-            }
+            self.run_check();
         }
         self.load_selected_font(ctx);
         if self.status_started.elapsed() < Duration::from_secs(2) {
@@ -241,6 +299,15 @@ impl eframe::App for FontSwitcherApp {
                         ui.label(RichText::new("正格点黑 16").size(28.0).strong().color(Color32::WHITE));
                         ui.add_space(4.0);
                         ui.label(RichText::new("字体切换器").size(20.0).color(Color32::from_gray(160)));
+                        if let Some(label) = &self.installed_label {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.label(
+                                    RichText::new(label)
+                                        .size(18.0)
+                                        .color(Color32::from_gray(180))
+                                );
+                            });
+                        }
                     });
                     ui.add_space(16.0);
 
@@ -321,7 +388,7 @@ impl eframe::App for FontSwitcherApp {
                     // Density Ticks Alignment (Left, Center, Right)
                     ui.horizontal(|ui| {
                         let total_w = ui.available_width();
-                        
+
                         let left_val = format!("{}", values[0]);
                         let is_left = self.density_index == 0;
                         ui.label(
@@ -330,13 +397,20 @@ impl eframe::App for FontSwitcherApp {
                                 .color(if is_left { Color32::WHITE } else { Color32::from_gray(130) })
                         );
 
-                        ui.add_space(total_w / 2.0 - 54.0);
-                        let mid_val = format!("{}", values[1]);
+                        // Center tick: reserve half-width region and center the text in it.
+                        // Pad with a leading space ("  80") so the visible glyph sits centered.
+                        let mid_val = format!("  {}", values[1]);
                         let is_mid = self.density_index == 1;
-                        ui.label(
-                            RichText::new(mid_val)
-                                .size(18.0)
-                                .color(if is_mid { Color32::WHITE } else { Color32::from_gray(130) })
+                        ui.allocate_ui_with_layout(
+                            Vec2::new((total_w / 2.0).max(0.0), ui.min_size().y),
+                            egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                            |ui| {
+                                ui.label(
+                                    RichText::new(mid_val)
+                                        .size(18.0)
+                                        .color(if is_mid { Color32::WHITE } else { Color32::from_gray(130) })
+                                );
+                            }
                         );
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -534,7 +608,11 @@ impl eframe::App for FontSwitcherApp {
                                 let width = if self.halfwidth { WidthMode::Half } else { WidthMode::Full };
                                 let variant = self.backend_variant();
                                 match self.backend.install(variant, width) {
-                                    Ok(report) => self.set_status(format!("已应用 {}：{}", self.variant().description(), report.active.path.display()), false),
+                                    Ok(report) => {
+                                        let key = report.active.variant.key();
+                                        self.installed_label = Some(format!("已安装：{}", key));
+                                        self.set_status(format!("已应用 {}：{}", self.variant().description(), report.active.path.display()), false);
+                                    }
                                     Err(error) => self.set_status(format!("应用失败：{error}"), true),
                                 }
                             }
@@ -554,7 +632,10 @@ impl eframe::App for FontSwitcherApp {
 
                             if ui.add(btn_disable).clicked() {
                                 match self.backend.disable() {
-                                    Ok(report) => self.set_status(format!("已停用字体，移除 {} 个文件", report.removed_files.len()), false),
+                                    Ok(report) => {
+                                        self.installed_label = Some("未安装".to_owned());
+                                        self.set_status(format!("已停用字体，移除 {} 个文件", report.removed_files.len()), false);
+                                    }
                                     Err(error) => self.set_status(format!("停用失败：{error}"), true),
                                 }
                             }
@@ -573,14 +654,7 @@ impl eframe::App for FontSwitcherApp {
                             .min_size(Vec2::new(86.0, 50.0));
 
                             if ui.add(btn_check).clicked() {
-                                match self.backend.check() {
-                                    Ok(status) => match status.state {
-                                        InstallState::Installed(active) => self.set_status(format!("已安装：{}", active.variant.key()), false),
-                                        InstallState::NotInstalled => self.set_status("尚未安装正格点黑 16", false),
-                                        InstallState::Mismatch { reason, .. } => self.set_status(format!("安装状态异常：{reason}"), true),
-                                    },
-                                    Err(error) => self.set_status(format!("检查失败：{error}"), true),
-                                }
+                                self.run_check();
                             }
                         });
                     });
@@ -716,7 +790,7 @@ fn main() -> eframe::Result {
         Box::new(|cc| {
             cc.egui_ctx.set_visuals(dark_visuals());
             bind_fallback_font(&cc.egui_ctx);
-            Ok(Box::new(FontSwitcherApp::default()))
+            Ok(Box::new(FontSwitcherApp::new(cc.storage.as_deref())))
         }),
     )
 }
