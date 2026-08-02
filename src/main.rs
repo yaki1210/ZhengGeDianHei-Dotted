@@ -280,8 +280,11 @@ impl eframe::App for FontSwitcherApp {
                         ui.add_space(4.0);
                         ui.label(RichText::new("字体切换器").size(20.0).color(Color32::from_gray(160)));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
-                            ui.label(RichText::new(&self.status).size(17.0).color(status_color));
+                            ui.label(
+                                RichText::new(format!("已预览：{}", self.variant().description()))
+                                    .size(17.0)
+                                    .color(Color32::from_gray(160))
+                            );
                         });
                     });
                     ui.add_space(16.0);
@@ -549,17 +552,17 @@ impl eframe::App for FontSwitcherApp {
 
                     // Section 6: Bottom Action Bar
                     ui.horizontal(|ui| {
-                        let status_desc = format!("已预览：{}", self.variant().description());
                         let left_width = (ui.available_width() - 310.0).max(180.0);
                         
                         ui.allocate_ui_with_layout(
                             Vec2::new(left_width, 50.0),
                             egui::Layout::left_to_right(egui::Align::Center),
                             |ui| {
+                                let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
                                 ui.label(
-                                    RichText::new(status_desc)
+                                    RichText::new(&self.status)
                                         .size(17.0)
-                                        .color(Color32::from_gray(160))
+                                        .color(status_color)
                                 );
                             }
                         );
