@@ -11,7 +11,6 @@ pub enum IntegrationError {
     Io(io::Error),
     Json(serde_json::Error),
     NotFound(&'static str),
-    JsoncUnsupported(PathBuf),
     InvalidConfig(String),
 }
 
@@ -21,7 +20,6 @@ impl std::fmt::Display for IntegrationError {
             Self::Io(e) => e.fmt(f),
             Self::Json(e) => write!(f, "JSON error: {e}"),
             Self::NotFound(name) => write!(f, "{name} configuration was not found"),
-            Self::JsoncUnsupported(path) => write!(f, "JSONC comments/trailing commas require manual editing: {}", path.display()),
             Self::InvalidConfig(message) => f.write_str(message),
         }
     }
@@ -100,9 +98,9 @@ pub fn terminal_settings_path() -> Option<PathBuf> {
 
 pub fn apply_terminal_font(family: &str, size: u32) -> Result<PathBuf, IntegrationError> {
     let path = terminal_settings_path().ok_or(IntegrationError::NotFound("Windows Terminal"))?;
-    if contains_jsonc(&path)? { return Err(IntegrationError::JsoncUnsupported(path)); }
-    let original = fs::read(&path)?;
-    let mut root: Value = serde_json::from_slice(&original)?;
+    let original_text = fs::read_to_string(&path)?;
+    let clean_text = strip_jsonc(&original_text);
+    let mut root: Value = serde_json::from_str(&clean_text)?;
     let defaults = root.pointer_mut("/profiles/defaults").and_then(Value::as_object_mut)
         .ok_or_else(|| IntegrationError::InvalidConfig("missing profiles.defaults in Windows Terminal settings".to_owned()))?;
     let font = defaults.entry("font").or_insert_with(|| json!({}));
@@ -146,22 +144,6 @@ fn backup_path(path: &Path, suffix: &str) -> PathBuf {
     path.with_file_name(format!("{name}{suffix}"))
 }
 
-fn contains_jsonc(path: &Path) -> Result<bool, IntegrationError> {
-    let text = fs::read_to_string(path)?;
-    let mut in_string = false;
-    let mut escaped = false;
-    for bytes in text.as_bytes().windows(2) {
-        if bytes == b"//" || bytes == b"/*" { return Ok(true); }
-    }
-    for byte in text.bytes() {
-        if escaped { escaped = false; continue; }
-        if byte == b'\\' && in_string { escaped = true; continue; }
-        if byte == b'"' { in_string = !in_string; }
-    }
-    let compact = text.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-    Ok(compact.contains(",}") || compact.contains(",]"))
-}
-
 fn atomic_copy(source: &Path, destination: &Path) -> Result<(), IntegrationError> {
     let temp = destination.with_extension("zgd16.tmp");
     fs::copy(source, &temp)?;
@@ -169,6 +151,61 @@ fn atomic_copy(source: &Path, destination: &Path) -> Result<(), IntegrationError
     if destination.exists() { fs::remove_file(destination)?; }
     fs::rename(temp, destination)?;
     Ok(())
+}
+
+/// Strip JSONC features (comments and trailing commas) from a JSON text.
+/// Handles string literals properly to avoid stripping inside strings.
+fn strip_jsonc(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+        // String literal: copy verbatim, handling escape sequences
+        if chars[i] == '"' {
+            result.push('"');
+            i += 1;
+            while i < len {
+                result.push(chars[i]);
+                if chars[i] == '\\' && i + 1 < len {
+                    i += 1;
+                    result.push(chars[i]);
+                } else if chars[i] == '"' {
+                    break;
+                }
+                i += 1;
+            }
+            i += 1;
+            continue;
+        }
+
+        // Single-line comment: // ... \n
+        if chars[i] == '/' && i + 1 < len && chars[i + 1] == '/' {
+            i += 2;
+            while i < len && chars[i] != '\n' {
+                i += 1;
+            }
+            continue;
+        }
+
+        // Block comment: /* ... */
+        if chars[i] == '/' && i + 1 < len && chars[i + 1] == '*' {
+            i += 2;
+            while i + 1 < len && !(chars[i] == '*' && chars[i + 1] == '/') {
+                i += 1;
+            }
+            i += 2; // skip */
+            continue;
+        }
+
+        result.push(chars[i]);
+        i += 1;
+    }
+
+    // Remove trailing commas before } and ]
+    let result = result.replace(",}", "}").replace(",]", "]");
+    result
 }
 
 fn atomic_write_json(path: &Path, value: &Value) -> Result<(), IntegrationError> {
@@ -186,10 +223,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn jsonc_detection_handles_comments_and_trailing_commas() {
-        let path = std::env::temp_dir().join(format!("zgd16-jsonc-{}.json", std::process::id()));
-        fs::write(&path, br#"{"a": 1,}"#).unwrap();
-        assert!(contains_jsonc(&path).unwrap());
-        let _ = fs::remove_file(path);
+    fn strip_jsonc_removes_comments_and_trailing_commas() {
+        let input = r#"{
+            // line comment
+            "a": 1, /* block comment */
+            "b": "http://example.com",
+            "c": 3,
+        }"#;
+        let output = strip_jsonc(input);
+        let parsed: Value = serde_json::from_str(&output).unwrap();
+        assert_eq!(parsed["a"], 1);
+        assert_eq!(parsed["c"], 3);
     }
 }
