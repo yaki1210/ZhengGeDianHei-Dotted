@@ -551,19 +551,30 @@ impl eframe::App for FontSwitcherApp {
                     ui.add_space(16.0);
 
                     // Section 6: Bottom Action Bar
-                    // Status text on bottom layer, buttons on top layer so long text doesn't push buttons
+                    // Text on bottom layer, buttons on top layer in the same row
+                    // Text wraps within remaining width after reserving button space
                     let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
-                    ui.add(
-                        egui::Label::new(
-                            RichText::new(&self.status)
-                                .size(17.0)
-                                .color(status_color)
-                        )
-                        .wrap()
-                    );
-                    ui.add_space(8.0);
+                    let button_area_width = 310.0;
+                    let text_width = (ui.available_width() - button_area_width).max(100.0);
                     ui.horizontal(|ui| {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(text_width, 50.0),
+                            egui::Layout::top_down(egui::Align::LEFT),
+                            |ui| {
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(&self.status)
+                                            .size(17.0)
+                                            .color(status_color)
+                                    )
+                                    .wrap()
+                                );
+                            }
+                        );
+                        ui.allocate_ui_with_layout(
+                            Vec2::new(button_area_width, 50.0),
+                            egui::Layout::right_to_left(egui::Align::Center),
+                            |ui| {
                             // Button 3: 应用切换
                             let btn_apply = egui::Button::new(
                                 RichText::new("应用\n切换")
