@@ -645,8 +645,8 @@ impl eframe::App for FontSwitcherApp {
                                                 .color(status_color)
                                         )
                                         .wrap()
-                                        .on_hover_text(&self.status_tooltip)
-                                    );
+                                    )
+                                    .on_hover_text(&self.status_tooltip);
                                 }
                             );
                         }
