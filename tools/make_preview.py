@@ -9,7 +9,7 @@ HW = BASE / "ZhengGeDianHei16-Halfwidth.ttf"
 PREVIEW = BASE / "preview"
 FONTS = PREVIEW / "fonts"
 
-SAMPLE = "正格点黑16 像素字体之美 ←→↔⇒∞√∑≤∈■◆♥●①αβЖ Aag。、"
+SAMPLE = "正格点黑16 方其中，圆其外 ←→↔⇒∞√∑≤∈■◆♥●①αβЖ Aag。、"
 SHORT = "正格点黑永国←→■♥①αЖ"
 
 ROWS = [("原版 Original", SRC),
@@ -68,6 +68,22 @@ def render_zoom(factor=5):
     print("preview_zoom5x.png", img.size)
 
 
+def render_30px():
+    size, row_h, lab_w, pad = 30, 46, 150, 16
+    lf = label_font(14)
+    fonts = [ImageFont.truetype(str(p), size) for _, p in ROWS]
+    w = lab_w + size * len(SAMPLE) + 40
+    img = Image.new("RGB", (w, row_h * len(ROWS) + pad * 2), "white")
+    d = ImageDraw.Draw(img)
+    for r, ((label, _), f) in enumerate(zip(ROWS, fonts)):
+        y = pad + r * row_h
+        d.text((8, y + size // 2 - 12), label, font=lf, fill=(90, 90, 90))
+        d.text((lab_w, y), SAMPLE, font=f, fill=(0, 0, 0))
+        d.line((0, y + row_h - 4, w, y + row_h - 4), fill=(230, 230, 230))
+    img.save(PREVIEW / "preview_30px.png")
+    print("preview_30px.png", img.size)
+
+
 def render_large(size=48):
     row_h, lab_w, pad = size + 18, 150, 16
     lf = label_font(14)
@@ -84,6 +100,5 @@ def render_large(size=48):
 
 
 if __name__ == "__main__":
-    render_16px()
-    render_zoom()
+    render_30px()
     render_large()

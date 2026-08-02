@@ -16,7 +16,7 @@ use windows_backend::{FontBackend, InstallState, Variant as BackendVariant, Widt
 const FONT_FAMILY: &str = "zhengge-preview";
 const FONT_DATA_KEY: &str = "zhengge-selected";
 const SYSTEM_FAMILY: &str = "正格点黑 16";
-const DEFAULT_PREVIEW: &str = "正格点黑 16  Aa 0123456789\n像素字体之美 · 中英数字 ↔ →";
+const DEFAULT_PREVIEW: &str = "正格点黑 16  Aa 0123456789\n方其中，圆其外 · 中英数字 ↔ →";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum Shape {

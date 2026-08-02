@@ -33,6 +33,8 @@ COMMIT_MSG.txt
 dist/*.exe
 dist/release/
 zhengge-font-switcher-windows/
+release-staging/
+ZhengGeDianHei16-FontSwitcher-windows*.zip
 
 # Duplicate font trees (canonical copies live in dist/fonts/)
 preview/fonts/

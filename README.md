@@ -12,20 +12,36 @@
 
 ---
 
+## 预览
+
+### 48px 预览
+
+![48px 预览](preview/preview_48px.png)
+
+### 30px 预览
+
+![30px 预览](preview/preview_30px.png)
+
+### 应用截图
+
+![应用截图](preview/app.png)
+
+---
+
 ## 快速开始（推荐：Release 包）
 
 1. 打开 [Releases](https://github.com/yaki1210/ZhengGeDianHei-Dotted/releases)，下载最新的 `ZhengGeDianHei16-FontSwitcher-windows.zip`
 2. 解压后目录结构大致为：
 
    ```text
-   正格点黑16字体切换器.exe
+   正格点黑.exe
    fonts\          ← 全部 TTF 变体（必须与 EXE 同级）
    extension\      ← 可选：浏览器扩展
    README.md
    ```
 
 3. **先为所有用户安装任意一个字体文件**（重要，见下方「首次安装」）
-4. 再运行 `正格点黑16字体切换器.exe`，选择变体后点 **应用切换**
+4. 再运行 `正格点黑.exe`，选择变体后点 **应用切换**
 
 > 不要只拷贝 EXE：缺少同级 `fonts\` 目录时，切换器无法加载变体。
 
@@ -129,7 +145,7 @@ cargo build --release --target x86_64-pc-windows-msvc
 ```powershell
 New-Item -ItemType Directory -Force dist\release | Out-Null
 Copy-Item target\x86_64-pc-windows-msvc\release\zhengge-font-switcher.exe `
-  dist\release\正格点黑16字体切换器.exe
+  dist\release\正格点黑.exe
 Copy-Item dist\fonts dist\release\fonts -Recurse -Force
 ```
 
@@ -156,6 +172,23 @@ GitHub Actions 工作流：`.github/workflows/build-rust.yml`（push / 手动触
 | `ZhengGeDianHei-16.ttf`、`ZhengGeDianHei16-Halfwidth.ttf` | 基底字体 |
 | `README.md`、`LICENSE`、`.github/` | 文档与 CI |
 
+### 关键资源依赖说明
+
+下表说明这些资源为什么需要纳入 Git，以及移除后会造成什么影响：
+
+| 资源 | 用途 | 能否从 Git 移除 |
+| --- | --- | --- |
+| `ZhengGeDianHei-16.ttf` | 基底全宽字体，所有变体的生成源 | 否（移除后无法重建字体） |
+| `ZhengGeDianHei16-Halfwidth.ttf` | 半宽符号字体源，由 `tools/fix_halfwidth_symbols.py` 生成 | 否（`-HW` 变体依赖它） |
+| `icon.ico` | Windows 可执行文件图标，`build.rs` 编译时使用 | 否（移除后 EXE 无图标或编译失败） |
+| `icon.png` | 应用窗口图标，`src/main.rs` 通过 `include_bytes!` 嵌入 | 否（移除后 Rust 编译报错） |
+| `tools/*.py` | 字体变体生成、预览图生成、校验脚本 | 否（移除后无法从源码生成字体/预览） |
+| `tools/FontSwitcher.cs` | 旧版 C# 字体切换器参考实现 | 可保留作为历史参考 |
+| `dist/fonts/*.ttf` | 发布用字体变体，与 EXE 配套分发 | 否（Release 包核心内容） |
+| `dist/icon.ico` | 发布包图标副本 | 可保留，与根目录 `icon.ico` 保持一致 |
+| `extension/icons/*.png` | 浏览器扩展图标 | 否（扩展必需） |
+| `preview/*.png` | README 效果预览图 | 否（文档展示用） |
+
 ### 应忽略、不要提交
 
 | 路径 | 原因 |
@@ -168,14 +201,6 @@ GitHub Actions 工作流：`.github/workflows/build-rust.yml`（push / 手动触
 | `Snipaste_*.png`、`__pycache__/`、`plan.md` | 截图、缓存、内部草稿 |
 
 完整规则见 [`.gitignore`](./.gitignore)。
-
----
-
-## 预览
-
-![16px 预览](preview/preview_16px.png)
-
-![48px 预览](preview/preview_48px.png)
 
 ---
 
