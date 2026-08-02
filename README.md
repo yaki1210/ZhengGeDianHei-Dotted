@@ -1,12 +1,12 @@
-# 正格点黑 16（ZhengGeDianHei-Dotted）
+# 正格点黑 针印式（ZhengGeDianHei-Dotted）
 
-基于 [DotGothic16](https://github.com/fontworks-fonts/DotGothic16/) 衍生的 **16px 像素中文字体**，附带 Windows 字体切换器与浏览器扩展，可在圆点 / 方块多种密度变体之间一键切换。
+基于 [yzdnn/ZhengGeDianHei-16](https://github.com/yzdnn/ZhengGeDianHei-16) 与 [DotGothic16](https://github.com/fontworks-fonts/DotGothic16/) 二次开发的 **16px 像素黑体**，适用于记事本、终端（可选）、浏览器（可选）等场景。附带 Windows 字体切换器与浏览器扩展，可在圆点 / 方块多种密度变体之间一键切换。
 
 | 组件 | 说明 |
 | --- | --- |
 | **字体包** | 圆点 70/80/90、方块 70/80/100（原版），各含全宽与半宽（终端兼容） |
 | **字体切换器** | Windows 原生 EXE（Rust + egui），安装 / 切换 / 停用系统字体，并写入 Chrome、Edge、Windows Terminal 偏好 |
-| **浏览器扩展** | Chrome / Edge Manifest V3，强制网页使用「正格点黑 16」，自动保留图标字体与 emoji |
+| **浏览器扩展** | Chrome / Edge Manifest V3，强制网页使用「正格点黑 针印式」，自动保留图标字体与 emoji |
 
 许可证：[SIL Open Font License 1.1](./LICENSE)
 
@@ -120,7 +120,7 @@
 
 ### 使用
 
-- 默认开启：网页正文字体强制为「正格点黑 16」
+- 默认开启：网页正文字体强制为「正格点黑 针印式」
 - 自动保留 Material Icons / Font Awesome / iconfont 等图标字体
 - emoji 走系统回退，不受影响
 - 点击扩展图标可开关
@@ -218,9 +218,13 @@ A: 已知兼容问题。请改用 Chrome，或安装本仓库扩展。
 **Q: 终端里符号和汉字叠在一起？**  
 A: 勾选「窄终端兼容模式」，重新 **应用切换** 后再 **应用终端字体**。
 
+**Q: 本字体与点点像素体有什么区别？**  
+A: [点点像素体](https://github.com/wixette/dotted-chinese-fonts) 为 12px 宋体（衬线），本字体为 16px 黑体（无衬线），像素密度更高、字形更清晰，更符合我的审美。
+
 ---
 
 ## 致谢
 
-- 基底风格与开源许可来自 [DotGothic16](https://github.com/fontworks-fonts/DotGothic16/)（Fontworks / SIL OFL 1.1）
+- 基底字体来自 [yzdnn/ZhengGeDianHei-16](https://github.com/yzdnn/ZhengGeDianHei-16)（SIL OFL 1.1），在原版「ドットゴシック16」基础上增补了简繁汉字
+- 日文字形来源 [DotGothic16](https://github.com/fontworks-fonts/DotGothic16/)（Fontworks / SIL OFL 1.1）
 - 切换器 UI： [egui](https://github.com/emilk/egui) / eframe
