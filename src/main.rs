@@ -91,6 +91,7 @@ struct FontSwitcherApp {
     backend: FontBackend,
     status: String,
     status_is_error: bool,
+    status_tooltip: String,
     status_started: Instant,
     fonts_ready: bool,
     status_checked: bool,
@@ -117,6 +118,7 @@ impl Default for FontSwitcherApp {
             backend: FontBackend::new(locate_fonts_dir()),
             status: "尚未应用到系统字体".to_owned(),
             status_is_error: false,
+            status_tooltip: String::new(),
             status_started: Instant::now(),
             fonts_ready: false,
             status_checked: false,
@@ -142,6 +144,7 @@ impl FontSwitcherApp {
     fn set_status(&mut self, text: impl Into<String>, is_error: bool) {
         self.status = text.into();
         self.status_is_error = is_error;
+        self.status_tooltip = String::new();
         self.status_started = Instant::now();
     }
 
@@ -551,30 +554,18 @@ impl eframe::App for FontSwitcherApp {
                     ui.add_space(16.0);
 
                     // Section 6: Bottom Action Bar
-                    // Text on bottom layer, buttons on top layer in the same row
-                    // Text wraps within remaining width after reserving button space
+                    // Buttons fixed at the rightmost side, status text on the left
                     let status_color = if self.status_is_error { Color32::from_rgb(235, 130, 130) } else { Color32::from_gray(160) };
                     let button_area_width = 310.0;
-                    let text_width = (ui.available_width() - button_area_width).max(100.0);
-                    ui.horizontal(|ui| {
-                        ui.allocate_ui_with_layout(
-                            Vec2::new(text_width, 50.0),
-                            egui::Layout::top_down(egui::Align::LEFT),
-                            |ui| {
-                                ui.add(
-                                    egui::Label::new(
-                                        RichText::new(&self.status)
-                                            .size(17.0)
-                                            .color(status_color)
-                                    )
-                                    .wrap()
-                                );
-                            }
-                        );
-                        ui.allocate_ui_with_layout(
-                            Vec2::new(button_area_width, 50.0),
-                            egui::Layout::right_to_left(egui::Align::Center),
-                            |ui| {
+                    ui.allocate_ui_with_layout(
+                        Vec2::new(ui.available_width(), 50.0),
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            // Buttons area (first child → rightmost position)
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(button_area_width, 50.0),
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
                             // Button 3: 应用切换
                             let btn_apply = egui::Button::new(
                                 RichText::new("应用\n切换")
@@ -590,7 +581,10 @@ impl eframe::App for FontSwitcherApp {
                                 let width = if self.halfwidth { WidthMode::Half } else { WidthMode::Full };
                                 let variant = self.backend_variant();
                                 match self.backend.install(variant, width) {
-                                    Ok(report) => self.set_status(format!("已应用 {}\n{}", self.variant().description(), report.active.path.display()), false),
+                                    Ok(report) => {
+                                        self.set_status(format!("已应用 {}", self.variant().description()), false);
+                                        self.status_tooltip = report.active.path.display().to_string();
+                                    }
                                     Err(error) => self.set_status(format!("应用失败：{error}"), true),
                                 }
                             }
@@ -639,7 +633,24 @@ impl eframe::App for FontSwitcherApp {
                                 }
                             }
                         });
-                    });
+                            // Status text area (second child → left of buttons)
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(ui.available_width(), 50.0),
+                                egui::Layout::top_down(egui::Align::LEFT),
+                                |ui| {
+                                    ui.add(
+                                        egui::Label::new(
+                                            RichText::new(&self.status)
+                                                .size(17.0)
+                                                .color(status_color)
+                                        )
+                                        .wrap()
+                                        .on_hover_text(&self.status_tooltip)
+                                    );
+                                }
+                            );
+                        }
+                    );
 
                     ui.add_space(16.0);
                 });
