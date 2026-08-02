@@ -108,7 +108,7 @@ pub fn apply_terminal_font(family: &str, size: u32) -> Result<PathBuf, Integrati
     font.insert("face".to_owned(), Value::String(family.to_owned()));
     font.insert("size".to_owned(), Value::Number(serde_json::Number::from(size)));
     let backup = backup_path(&path, ".zgd16-backup");
-    if !backup.exists() { fs::write(&backup, &original)?; }
+    if !backup.exists() { fs::write(&backup, &original_text)?; }
     atomic_write_json(&path, &root)?;
     Ok(path)
 }
