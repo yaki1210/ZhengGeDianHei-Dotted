@@ -199,12 +199,22 @@ fn strip_jsonc(text: &str) -> String {
             continue;
         }
 
+        // Trailing comma: skip if followed by whitespace then } or ]
+        if chars[i] == ',' {
+            let mut j = i + 1;
+            while j < len && chars[j].is_whitespace() {
+                j += 1;
+            }
+            if j < len && (chars[j] == '}' || chars[j] == ']') {
+                i += 1;
+                continue;
+            }
+        }
+
         result.push(chars[i]);
         i += 1;
     }
 
-    // Remove trailing commas before } and ]
-    let result = result.replace(",}", "}").replace(",]", "]");
     result
 }
 
