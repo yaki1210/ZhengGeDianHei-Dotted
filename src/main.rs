@@ -215,6 +215,8 @@ impl eframe::App for FontSwitcherApp {
             .inner_margin(egui::Margin::symmetric(20.0, 16.0));
 
         egui::CentralPanel::default().frame(panel_frame).show(ctx, |ui| {
+            // Hide the side scrollbar (keep wheel/drag scrolling) for a cleaner look
+            ui.style_mut().spacing.scroll.bar_width = 0.0;
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
@@ -314,7 +316,7 @@ impl eframe::App for FontSwitcherApp {
                                 .color(if is_left { Color32::WHITE } else { Color32::from_gray(130) })
                         );
 
-                        ui.add_space(total_w / 2.0 - 36.0);
+                        ui.add_space(total_w / 2.0 - 54.0);
                         let mid_val = format!("{}", values[1]);
                         let is_mid = self.density_index == 1;
                         ui.label(
@@ -449,19 +451,6 @@ impl eframe::App for FontSwitcherApp {
                                 });
                             });
 
-                            // Half-width terminal compatibility mode
-                            ui.add_space(8.0);
-                            let mut halfwidth = self.halfwidth;
-                            if ui.checkbox(
-                                &mut halfwidth,
-                                RichText::new("窄终端兼容模式（半宽符号：防止与下一字符重叠）")
-                                    .size(18.0)
-                                    .color(Color32::from_gray(210))
-                            ).changed() {
-                                self.halfwidth = halfwidth;
-                                self.selected_font = None;
-                            }
-
                             if self.show_terminal_menu {
                                 ui.add_space(8.0);
                                 ui.separator();
@@ -480,6 +469,19 @@ impl eframe::App for FontSwitcherApp {
                                         }
                                     }
                                 });
+
+                                // Half-width terminal compatibility mode (inside expanded panel)
+                                ui.add_space(8.0);
+                                let mut halfwidth = self.halfwidth;
+                                if ui.checkbox(
+                                    &mut halfwidth,
+                                    RichText::new("窄终端兼容模式（半宽符号：防止与下一字符重叠）")
+                                        .size(18.0)
+                                        .color(Color32::from_gray(210))
+                                ).changed() {
+                                    self.halfwidth = halfwidth;
+                                    self.selected_font = None;
+                                }
                             }
                         });
 
