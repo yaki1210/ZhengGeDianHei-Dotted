@@ -3,28 +3,124 @@
 <head>
 <meta charset="utf-8">
 <style>
-  body { width: 250px; font-family: "Microsoft YaHei", sans-serif; margin: 0; padding: 12px 14px; }
-  h1 { font-size: 13px; margin: 0 0 10px; }
-  .row { margin: 7px 0; font-size: 12px; }
-  input { vertical-align: middle; }
-  label { vertical-align: middle; cursor: pointer; }
-  .note { color: #888; font-size: 11px; margin-top: 10px; line-height: 1.6; }
+  /* 与 exe 对齐的配色变量 */
+  :root {
+    --bg:        #121212;  /* 主背景 rgb(18,18,18) */
+    --card:      #181818;  /* 卡片背景 rgb(24,24,24) */
+    --border:    #2C2C2C;  /* 边框 rgb(44,44,44) */
+    --fg:        #E6E6E6;  /* 主文字 gray(230) */
+    --fg-sub:    #A0A0A0;  /* 副文字 gray(160) */
+    --fg-note:   #828282;  /* 注释 gray(130) */
+    --accent:    #FFFFFF;  /* 主按钮底 */
+    --accent-fg: #111111;  /* 主按钮字 rgb(17,17,17) */
+    --error:     #EB8282;  /* 错误色 rgb(235,130,130) */
+    --radius:    8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    width: 320px;
+    padding: 16px 16px 14px;
+  }
+
+  /* 标题区：参照 exe 主标题「正格点黑 16 / 字体切换器」副标结构 */
+  .header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .header .title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fg);
+    letter-spacing: 0.5px;
+  }
+  .header .subtitle {
+    font-size: 12px;
+    color: var(--fg-sub);
+  }
+
+  /* 卡片容器 */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  /* 开关行 */
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
+    font-size: 13px;
+    color: var(--fg);
+  }
+  .row:last-child { margin-bottom: 0; }
+
+  /* 原生 checkbox 配色对齐：保留外观但用 accent color */
+  input[type="checkbox"] {
+    accent-color: #FFFFFF;  /* 选中态主色，对齐 exe 白色 accent */
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+  label { cursor: pointer; color: var(--fg); }
+
+  /* 状态/说明文字 */
+  .note {
+    color: var(--fg-note);
+    font-size: 11px;
+    line-height: 1.6;
+    margin-top: 10px;
+  }
+
+  /* 底部签名条 */
+  .footer {
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--fg-note);
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
 </style>
 </head>
 <body>
-<h1>正格点黑 16 全局字体</h1>
-<div class="row">
-  <input type="checkbox" id="enable" checked>
-  <label for="enable">启用强制字体</label>
-</div>
-<div class="row">
-  <input type="checkbox" id="icons" checked>
-  <label for="icons">保留图标字体</label>
-</div>
-<div class="note">
-  开启后网页正文、按钮、输入框等全部使用「正格点黑 16」。
-  图标字体会被保留，emoji 由系统自动回退。刷新页面后完全生效。
-</div>
-<script src="popup.js"></script>
+  <div class="header">
+    <span class="title">正格点黑 16</span>
+    <span class="subtitle">全局字体</span>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <label for="enable">启用强制字体</label>
+      <input type="checkbox" id="enable" checked>
+    </div>
+    <div class="row">
+      <label for="icons">保留图标字体</label>
+      <input type="checkbox" id="icons" checked>
+    </div>
+  </div>
+
+  <div class="note">
+    开启后网页正文、按钮、输入框等全部使用「正格点黑 16」。
+    图标字体会被保留，emoji 由系统自动回退。刷新页面后完全生效。
+  </div>
+
+  <div class="footer">v1.0.0 · 像素字体</div>
+
+  <script src="popup.js"></script>
 </body>
 </html>
